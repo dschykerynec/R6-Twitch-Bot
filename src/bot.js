@@ -1,5 +1,10 @@
 import { loadEnvFile } from 'node:process';
-loadEnvFile('.env');
+
+try {
+  loadEnvFile('.env');
+} catch (err) {
+  // .env file doesn't exist (e.g., in Railway)
+}
 
 import WebSocket from 'ws';
 import { fetchRank, findLeaderboardPosition } from './rank.js';
