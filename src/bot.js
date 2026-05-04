@@ -1,6 +1,3 @@
-import { loadEnvFile } from 'node:process';
-loadEnvFile('.env');
-
 import WebSocket from 'ws';
 import { fetchRank, findLeaderboardPosition } from './rank.js';
 
