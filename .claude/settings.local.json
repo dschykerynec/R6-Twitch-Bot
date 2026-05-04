@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:tracker.gg)",
+      "WebFetch(domain:feedback.tracker.gg)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:r6data.eu)",
+      "WebFetch(domain:dev.twitch.tv)",
+      "WebFetch(domain:dev.to)",
+      "PowerShell(New-Item -ItemType Directory -Path \"x:\\\\Dev\\\\R6 Twitch Bot\\\\src\" -Force)",
+      "PowerShell(Move-Item \"x:\\\\Dev\\\\R6 Twitch Bot\\\\bot.js\" \"x:\\\\Dev\\\\R6 Twitch Bot\\\\src\\\\bot.js\")",
+      "PowerShell(Move-Item \"x:\\\\Dev\\\\R6 Twitch Bot\\\\rank.js\" \"x:\\\\Dev\\\\R6 Twitch Bot\\\\src\\\\rank.js\")"
+    ]
+  }
+}
