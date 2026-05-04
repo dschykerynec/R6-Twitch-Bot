@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node src/bot.js"
+  },
   "dependencies": {
     "ws": "^8.20.0"
   }
