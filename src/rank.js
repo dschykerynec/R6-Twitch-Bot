@@ -25,14 +25,33 @@ export async function fetchLeaderboard(page = 1) {
   return response.json();
 }
 
-async function searchPage(username, entries, page, apiCalls) {
+async function searchPage(username, targetRP, entries, page, apiCalls) {
   const entry = entries.find(p => p.id === username);
   if (entry) return { position: entry.position, page, apiCalls };
 
-  // Check next page in case of RP tie at page boundary
-  const next = await fetchLeaderboard(page + 1);
-  const boundary = next.find(p => p.id === username);
-  return { position: boundary ? boundary.position : null, page: boundary ? page + 1 : page, apiCalls: apiCalls + 1 };
+  // Expand forward while the next page still has entries at or above targetRP (ties)
+  let nextPage = page + 1;
+  while (true) {
+    const next = await fetchLeaderboard(nextPage);
+    apiCalls++;
+    if (!next.length || next[0].rankPoints < targetRP) break;
+    const found = next.find(p => p.id === username);
+    if (found) return { position: found.position, page: nextPage, apiCalls };
+    nextPage++;
+  }
+
+  // Expand backward while the prev page's last entry is at or below targetRP (ties at boundary)
+  let prevPage = page - 1;
+  while (prevPage >= 1) {
+    const prev = await fetchLeaderboard(prevPage);
+    apiCalls++;
+    if (!prev.length || prev[prev.length - 1].rankPoints > targetRP) break;
+    const found = prev.find(p => p.id === username);
+    if (found) return { position: found.position, page: prevPage, apiCalls };
+    prevPage--;
+  }
+
+  return { position: null, page: null, apiCalls };
 }
 
 export async function findLeaderboardPosition(username, targetRP) {
@@ -50,11 +69,11 @@ export async function findLeaderboardPosition(username, targetRP) {
     const lastRP = entries[entries.length - 1].rankPoints;
 
     if (firstRP >= targetRP && lastRP <= targetRP) {
-      return searchPage(username, entries, page, apiCalls);
+      return searchPage(username, targetRP, entries, page, apiCalls);
     }
 
     if (lastRP > targetRP) {
-      page += 50; // entire page is above target, go deeper
+      page += 20; // entire page is above target, go deeper
     } else {
       break; // entire page is below target, overshot
     }
@@ -72,7 +91,7 @@ export async function findLeaderboardPosition(username, targetRP) {
     const lastRP = entries[entries.length - 1].rankPoints;
 
     if (firstRP >= targetRP && lastRP <= targetRP) {
-      return searchPage(username, entries, page, apiCalls);
+      return searchPage(username, targetRP, entries, page, apiCalls);
     }
 
     if (lastRP > targetRP) break; // gone too far back, player not found

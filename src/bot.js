@@ -7,7 +7,7 @@ try {
 }
 
 import WebSocket from 'ws';
-import { fetchRank, findLeaderboardPosition } from './rank.js';
+import { fetchRank } from './rank.js';
 
 const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, TWITCH_CHANNEL_USER_ID } = process.env;
 
@@ -133,14 +133,8 @@ function connect() {
       if (text === '!rank') {
         if (isOnCooldown(text)) return;
         try {
-          const { rank, rp, rawRank, rawRP } = await fetchRank();
-          if (rawRank === 36) {
-            const { position } = await findLeaderboardPosition('speztl', rawRP);
-            const posStr = position ? `#${position} ` : '';
-            await sendChatMessage(`speztl is currently ${posStr}Champ with ${rp} RP`);
-          } else {
-            await sendChatMessage(`speztl is currently ${rank} with ${rp} RP`);
-          }
+          const { rank, rp } = await fetchRank();
+          await sendChatMessage(`speztl is currently ${rank} with ${rp} RP`);
         } catch (err) {
           await sendChatMessage('Could not fetch rank right now. Kid_Howdy is a terrible coder.');
           console.error(err.message);
