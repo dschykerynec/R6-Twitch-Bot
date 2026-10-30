@@ -24,6 +24,7 @@ It runs 24/7 on [Railway](https://railway.app) in my brother's Twitch channel. H
 | `!legend` | Current Legend Division MMR and season peak for the `DEFAULT_PLAYER` | 30s |
 | `!legend <player>` | Same lookup for any PC player | 30s |
 
+Cooldowns are set to 30s because Twitch doesn't let bots send identical messages within 30 seconds. R6 games are long anyways.
 Without a name, `!rank` and `!legend` look up the player set in `DEFAULT_PLAYER`, which should be the R6 username of the streamer whose chat the bot is in. With a name, they look up that player instead.
 
 ## Features
