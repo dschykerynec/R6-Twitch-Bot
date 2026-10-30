@@ -13,7 +13,7 @@ viewer:  !legend
 bot:     <streamer> is in Legend Division with 5,120 MMR (peak 5,340)
 ```
 
-It runs 24/7 on [Railway](https://railway.app) in my brother's Twitch channel. He's top 0.4% of global players.
+It runs 24/7 on [Railway](https://railway.app) in Speztl's Twitch channel.
 
 ## Commands
 
