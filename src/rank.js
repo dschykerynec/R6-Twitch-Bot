@@ -1,5 +1,16 @@
 const BASE_URL = 'https://public-api.arenyze.com/r6/api';
 
+// The player shown when a command is used without a name argument (e.g. bare !rank).
+// Set DEFAULT_PLAYER in .env to point this at a different R6 username.
+//
+// This is read lazily (as a function), not as a module-level constant, because
+// static imports are hoisted above other top-level code — a constant read here
+// would be evaluated before callers like bot.js finish loading .env, permanently
+// freezing it as undefined regardless of what .env actually contains.
+export function getDefaultPlayer() {
+  return process.env.DEFAULT_PLAYER;
+}
+
 const RANK_NAMES = [
   'Unranked',
   'Copper 5', 'Copper 4', 'Copper 3', 'Copper 2', 'Copper 1',
@@ -110,7 +121,7 @@ export async function findLeaderboardPosition(username, targetRP) {
   return { position: null, page: null, apiCalls };
 }
 
-export async function fetchRank(username = 'speztl') {
+export async function fetchRank(username = getDefaultPlayer()) {
   const response = await fetch(
     `${BASE_URL}/v2/profile?nameOnPlatform=${username}&platformType=uplay`,
     {
@@ -138,7 +149,7 @@ export async function fetchRank(username = 'speztl') {
 
 // Legend Division is a separate ladder from 'ranked' with its own MMR — it isn't
 // exposed via board_ids_full_profiles, only through this season's segment data.
-export async function fetchLegendRank(username = 'speztl') {
+export async function fetchLegendRank(username = getDefaultPlayer()) {
   const response = await fetch(
     `${BASE_URL}/v2/profile?nameOnPlatform=${username}&platformType=uplay`,
     {

@@ -7,7 +7,7 @@ try {
 }
 
 import WebSocket from 'ws';
-import { fetchRank, fetchLegendRank } from './rank.js';
+import { fetchRank, fetchLegendRank, getDefaultPlayer } from './rank.js';
 
 const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, TWITCH_CHANNEL_USER_ID } = process.env;
 
@@ -57,7 +57,18 @@ async function sendChatMessage(text) {
     return sendChatMessage(text);
   }
 
-  if (!res.ok) console.error('Failed to send message:', res.status, await res.text());
+  if (!res.ok) {
+    console.error('Failed to send message:', res.status, await res.text());
+    return;
+  }
+
+  // Twitch can return 200 while still silently dropping the message (e.g. AutoMod,
+  // duplicate-message suppression) — the real outcome is in the response body.
+  const body = await res.json();
+  const result = body?.data?.[0];
+  if (result && result.is_sent === false) {
+    console.error('Message not sent (dropped by Twitch):', JSON.stringify(result.drop_reason));
+  }
 }
 
 async function subscribeToChat(sessionId) {
@@ -93,20 +104,25 @@ async function subscribeToChat(sessionId) {
   }
 }
 
+const DEFAULT_COOLDOWN_SECS = 30; // matches Twitch's own duplicate-message suppression window
+
 const COOLDOWNS = {
-  rank: 15,
-  rankPlayer: 10,
-  legend: 15,
-  legendPlayer: 10,
+  rank: DEFAULT_COOLDOWN_SECS,
+  rankPlayer: DEFAULT_COOLDOWN_SECS,
+  legend: DEFAULT_COOLDOWN_SECS,
+  legendPlayer: DEFAULT_COOLDOWN_SECS,
 };
+console.log('Cooldowns (seconds):', COOLDOWNS);
 
 const lastUsed = new Map();
 
 function isOnCooldown(key) {
-  const cooldownSecs = COOLDOWNS[key] ?? 15;
+  const cooldownSecs = COOLDOWNS[key] ?? DEFAULT_COOLDOWN_SECS;
   const lastTime = lastUsed.get(key) ?? 0;
   const elapsed = (Date.now() - lastTime) / 1000;
-  if (elapsed < cooldownSecs) return true;
+  const blocked = elapsed < cooldownSecs;
+  console.log(`[cooldown] ${key}: elapsed=${elapsed.toFixed(2)}s limit=${cooldownSecs}s -> ${blocked ? 'BLOCKED' : 'ALLOWED'}`);
+  if (blocked) return true;
   lastUsed.set(key, Date.now());
   return false;
 }
@@ -141,7 +157,7 @@ function connect() {
 
         try {
           const { rank, rp } = await fetchRank(playerArg);
-          const who = playerArg ?? 'speztl';
+          const who = playerArg ?? getDefaultPlayer();
           await sendChatMessage(`${who} is ${rank} with ${rp} RP`);
         } catch (err) {
           // A typo'd/nonexistent username usually surfaces as a 404 from the API;
@@ -164,7 +180,7 @@ function connect() {
 
       if (legendMatch) {
         const playerArg = legendMatch[1];
-        const who = playerArg ?? 'speztl';
+        const who = playerArg ?? getDefaultPlayer();
         const cooldownKey = playerArg ? 'legendPlayer' : 'legend';
         if (isOnCooldown(cooldownKey)) return;
 
