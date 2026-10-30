@@ -7,7 +7,7 @@ try {
 }
 
 import WebSocket from 'ws';
-import { fetchRank } from './rank.js';
+import { fetchRank, fetchLegendRank } from './rank.js';
 
 const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_BOT_USER_ID, TWITCH_CHANNEL_USER_ID } = process.env;
 
@@ -94,17 +94,20 @@ async function subscribeToChat(sessionId) {
 }
 
 const COOLDOWNS = {
-  '!rank': 15,
+  rank: 15,
+  rankPlayer: 10,
+  legend: 15,
+  legendPlayer: 10,
 };
 
 const lastUsed = new Map();
 
-function isOnCooldown(command) {
-  const cooldownSecs = COOLDOWNS[command] ?? 15;
-  const lastTime = lastUsed.get(command) ?? 0;
+function isOnCooldown(key) {
+  const cooldownSecs = COOLDOWNS[key] ?? 15;
+  const lastTime = lastUsed.get(key) ?? 0;
   const elapsed = (Date.now() - lastTime) / 1000;
   if (elapsed < cooldownSecs) return true;
-  lastUsed.set(command, Date.now());
+  lastUsed.set(key, Date.now());
   return false;
 }
 
@@ -129,14 +132,56 @@ function connect() {
 
     if (type === 'notification' && msg.metadata?.subscription_type === 'channel.chat.message') {
       const text = msg.payload.event.message.text.trim();
+      const rankMatch = text.match(/^!rank(?:\s+(\S+))?$/);
 
-      if (text === '!rank') {
-        if (isOnCooldown(text)) return;
+      if (rankMatch) {
+        const playerArg = rankMatch[1];
+        const cooldownKey = playerArg ? 'rankPlayer' : 'rank';
+        if (isOnCooldown(cooldownKey)) return;
+
         try {
-          const { rank, rp } = await fetchRank();
-          await sendChatMessage(`speztl is currently ${rank} with ${rp} RP`);
+          const { rank, rp } = await fetchRank(playerArg);
+          const who = playerArg ?? 'speztl';
+          await sendChatMessage(`${who} is ${rank} with ${rp} RP`);
         } catch (err) {
-          await sendChatMessage('Could not fetch rank right now. Kid_Howdy is a terrible coder.');
+          // A typo'd/nonexistent username usually surfaces as a 404 from the API;
+          // an account that exists but has no ranked stats throws this specific message.
+          const notFound = playerArg && (
+            err.message.includes('404') ||
+            err.message === 'No ranked profile found for this player'
+          );
+
+          if (notFound) {
+            await sendChatMessage(`Couldn't find ranked stats for "${playerArg}" — check the spelling.`);
+          } else {
+            await sendChatMessage('Could not fetch rank right now. Kid_Howdy is a terrible coder.');
+          }
+          console.error(err.message);
+        }
+      }
+
+      const legendMatch = text.match(/^!legend(?:\s+(\S+))?$/);
+
+      if (legendMatch) {
+        const playerArg = legendMatch[1];
+        const who = playerArg ?? 'speztl';
+        const cooldownKey = playerArg ? 'legendPlayer' : 'legend';
+        if (isOnCooldown(cooldownKey)) return;
+
+        try {
+          const { mmr, maxMmr } = await fetchLegendRank(playerArg);
+          await sendChatMessage(`${who} is in Legend Division with ${mmr} MMR (peak ${maxMmr})`);
+        } catch (err) {
+          const notFound = err.message.includes('404') ||
+            err.message === 'No Legend Division data found for this player';
+
+          if (notFound) {
+            await sendChatMessage(playerArg
+              ? `Couldn't find Legend Division stats for "${playerArg}" — check the spelling, or they may not be ranked in Legend Division.`
+              : `${who} isn't ranked in Legend Division right now.`);
+          } else {
+            await sendChatMessage('Could not fetch Legend Division rank right now. Kid_Howdy is a terrible coder.');
+          }
           console.error(err.message);
         }
       }
